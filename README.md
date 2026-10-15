@@ -1,6 +1,6 @@
-# GitHub Analysis Agent — 第一阶段
+# GitHub Analysis Agent — 第一、二阶段
 
-这是学习 AI Agent 开发的工具层项目，按 [PLAN.md](PLAN.md) 实现两个同步 Python 工具。目前不接入模型、RAG、记忆或 Agent 框架。
+这是学习 AI Agent 开发的项目，按 [PLAN.md](PLAN.md) 实现 GitHub 工具层及独立的 DeepSeek 模型适配层。当前不包含 Agent Loop、RAG、记忆或 Agent 框架。
 
 ## 安装与运行
 
@@ -19,6 +19,21 @@ Windows PowerShell 的激活命令为 `.venv\Scripts\Activate.ps1`。
 公开仓库可以匿名读取。程序默认从环境变量 `GITHUB_TOKEN` 读取凭证；`.env.example` 仅说明变量名，程序不会自动加载 `.env`。GitHub 连接器授权与此 Python 程序的凭证相互独立。私有仓库的细粒度 Token 需要该仓库的 Contents: read 权限。通过操作系统环境配置凭证，不把 Token 写入源码或提交。
 
 如果使用 SOCKS 代理（例如 Clash），额外安装 `python -m pip install -e '.[proxy]'`。HTTPX 默认读取环境中的代理配置。
+
+## DeepSeek 模型适配层（任务 2.1）
+
+适配层通过 OpenAI 兼容 SDK 请求 DeepSeek 官方 Chat Completions API。安装项目依赖后，在运行环境设置 `DEEPSEEK_API_KEY`；可选设置 `DEEPSEEK_MODEL`，默认是 `deepseek-flash`。`.env.example` 只列出变量名，不会自动加载，也不包含真实凭证。
+
+```python
+from github_analysis_agent import DeepSeekAdapter
+
+adapter = DeepSeekAdapter(timeout=30)
+reply = adapter.complete([{"role": "user", "content": "请介绍这个仓库。"}])
+print(reply.text)
+print(reply.usage.total_tokens)
+```
+
+默认请求会附上 `list_directory` 和 `read_file` 的 Function Calling 定义。模型返回的调用以 `reply.tool_calls` 中的名称、参数和调用 ID 提供；适配层不会导入或执行 GitHub 工具，也不负责多轮对话。设置 `enable_tools=False` 可只请求文本响应。错误类型见 `github_analysis_agent.model_errors`；异常消息不包含 SDK 响应正文或 API Key。
 
 ## 接口
 
@@ -80,7 +95,7 @@ python -m pytest -q
 
 复习检查：能解释 HTTP 请求 → JSON 响应 → Base64 解码成字节 → UTF-8 解码成文本，并区分 HTTP 错误与工具语义错误。
 
-参考：[GitHub Contents API](https://docs.github.com/en/rest/repos/contents)、[HTTPX](https://www.python-httpx.org/)、[pytest](https://docs.pytest.org/)。
+参考：[GitHub Contents API](https://docs.github.com/en/rest/repos/contents)、[DeepSeek API 模型与定价](https://api-docs.deepseek.com/quick_start/pricing/)、[DeepSeek Tool Calls](https://api-docs.deepseek.com/guides/function_calling)、[OpenAI Python SDK](https://github.com/openai/openai-python)、[HTTPX](https://www.python-httpx.org/)、[pytest](https://docs.pytest.org/)。
 
 ### 本次验证记录（2026-10-14）
 

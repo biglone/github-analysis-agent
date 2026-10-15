@@ -142,7 +142,7 @@ GET /repos/{owner}/{repo}/contents/{path}
 
 ### 开发范围
 
-- 使用 DeepSeek 官方 API，默认模型为 `deepseek-chat`；通过 OpenAI 兼容 SDK 调用。
+- 使用 DeepSeek 官方 API，默认模型为 `deepseek-flash`；模型名可通过 `DEEPSEEK_MODEL` 覆盖，并通过 OpenAI 兼容 SDK 调用。`deepseek-chat` 已于 2026-07-24 退役。
 - 实现独立的模型适配接口，支持普通文本对话和 function calling。
 - 将现有 `list_directory`、`read_file` 的工具定义传递给模型请求；解析并返回模型文本、工具调用名称与参数，以及可用的 token 用量信息。
 - 通过环境变量管理 DeepSeek API Key，不在源码、日志或提交内容中保存密钥。

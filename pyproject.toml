@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "Small, testable GitHub repository reading tools"
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = ["httpx>=0.27,<1"]
+dependencies = ["httpx>=0.27,<1", "openai>=1.68,<3"]
 
 [project.optional-dependencies]
 dev = ["pytest>=8,<9"]
