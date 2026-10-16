@@ -16,13 +16,26 @@ python examples/inspect_repository.py biglone github-analysis-agent --file PLAN.
 
 Windows PowerShell 的激活命令为 `.venv\Scripts\Activate.ps1`。
 
-公开仓库可以匿名读取。程序默认从环境变量 `GITHUB_TOKEN` 读取凭证；`.env.example` 仅说明变量名，程序不会自动加载 `.env`。GitHub 连接器授权与此 Python 程序的凭证相互独立。私有仓库的细粒度 Token 需要该仓库的 Contents: read 权限。通过操作系统环境配置凭证，不把 Token 写入源码或提交。
+公开仓库可以匿名读取。程序从环境变量 `GITHUB_TOKEN` 读取凭证。可以复制 `.env.example` 为 `.env` 后填写 GitHub Token；`.env` 会自动加载，且已加入 Git 忽略规则。GitHub 连接器授权与此 Python 程序的凭证相互独立。私有仓库的细粒度 Token 需要该仓库的 Contents: read 权限。不把 Token 写入源码或提交。
 
 如果使用 SOCKS 代理（例如 Clash），额外安装 `python -m pip install -e '.[proxy]'`。HTTPX 默认读取环境中的代理配置。
 
 ## DeepSeek 模型适配层（任务 2.1）
 
-适配层通过 OpenAI 兼容 SDK 请求 DeepSeek 官方 Chat Completions API。安装项目依赖后，在运行环境设置 `DEEPSEEK_API_KEY`；可选设置 `DEEPSEEK_MODEL`，默认是 `deepseek-flash`。`.env.example` 只列出变量名，不会自动加载，也不包含真实凭证。
+适配层通过 OpenAI 兼容 SDK 请求 DeepSeek 官方 Chat Completions API。安装项目依赖后，在项目根目录复制示例配置并编辑：
+
+```bash
+cp .env.example .env
+```
+
+在 `.env` 中填入从 DeepSeek Platform 创建的 Key，并保留默认模型或自行更改：
+
+```dotenv
+DEEPSEEK_API_KEY=你的真实API密钥
+DEEPSEEK_MODEL=deepseek-flash
+```
+
+程序初始化 `DeepSeekAdapter` 时会自动加载项目目录中的 `.env`。系统已设置的环境变量优先于 `.env`。`.env` 已被 Git 忽略；提交前可用 `git check-ignore .env` 确认。不要把真实 Key 写入 `.env.example` 或提交到仓库。
 
 ```python
 from github_analysis_agent import DeepSeekAdapter

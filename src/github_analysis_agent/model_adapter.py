@@ -8,6 +8,7 @@ import httpx
 from openai import (APIConnectionError, APIStatusError, APITimeoutError,
                     AuthenticationError, OpenAI, RateLimitError)
 
+from .config import load_project_env
 from .model_errors import (InvalidToolArgumentsError, MissingAPIKeyError,
                            ModelAuthenticationError, ModelNetworkError,
                            ModelRateLimitError, ModelResponseError,
@@ -87,6 +88,7 @@ class DeepSeekAdapter:
     """Call DeepSeek using the OpenAI SDK and normalize its response."""
 
     def __init__(self, *, timeout=30.0, client=None):
+        load_project_env()
         api_key = os.getenv("DEEPSEEK_API_KEY", "").strip()
         if not api_key:
             raise MissingAPIKeyError("DEEPSEEK_API_KEY is not set")

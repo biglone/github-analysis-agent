@@ -1,4 +1,5 @@
 import json
+import os
 
 import httpx
 import pytest
@@ -101,6 +102,36 @@ def test_missing_key_is_clear(monkeypatch):
     monkeypatch.delenv("DEEPSEEK_API_KEY", raising=False)
     with pytest.raises(MissingAPIKeyError, match="DEEPSEEK_API_KEY"):
         DeepSeekAdapter()
+
+
+def test_loads_key_and_model_from_project_dotenv(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("DEEPSEEK_API_KEY", raising=False)
+    monkeypatch.delenv("DEEPSEEK_MODEL", raising=False)
+    (tmp_path / ".env").write_text(
+        "DEEPSEEK_API_KEY=dotenv-test-key\nDEEPSEEK_MODEL=dotenv-model\n",
+        encoding="utf-8",
+    )
+    adapter = DeepSeekAdapter(client=sdk_client(lambda r: httpx.Response(200, json=completion())))
+    assert adapter.model == "dotenv-model"
+    assert os.environ["DEEPSEEK_API_KEY"] == "dotenv-test-key"
+    assert os.environ["DEEPSEEK_MODEL"] == "dotenv-model"
+    # Keep the test key from leaking into the rest of the test process.
+    monkeypatch.delenv("DEEPSEEK_API_KEY")
+    monkeypatch.delenv("DEEPSEEK_MODEL")
+
+
+def test_process_environment_overrides_dotenv(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / ".env").write_text(
+        "DEEPSEEK_API_KEY=dotenv-key\nDEEPSEEK_MODEL=dotenv-model\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("DEEPSEEK_API_KEY", "process-key")
+    monkeypatch.setenv("DEEPSEEK_MODEL", "process-model")
+    adapter = DeepSeekAdapter(client=sdk_client(lambda r: httpx.Response(200, json=completion())))
+    assert adapter.model == "process-model"
+    assert os.environ["DEEPSEEK_API_KEY"] == "process-key"
 
 
 @pytest.mark.parametrize("status,error", [(401, ModelAuthenticationError), (429, ModelRateLimitError)])

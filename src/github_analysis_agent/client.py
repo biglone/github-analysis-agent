@@ -7,6 +7,7 @@ from urllib.parse import quote
 
 import httpx
 
+from .config import load_project_env
 from .errors import (
     AuthenticationError, EmptyRepositoryError, GitHubError, InvalidArgumentError,
     NetworkError, NotFoundError, PermissionDeniedError, RateLimitError,
@@ -30,6 +31,7 @@ def validate_arguments(owner, repo, path, ref):
 
 class GitHubClient:
     def __init__(self, token=None, *, timeout=10.0, transport=None):
+        load_project_env()
         if isinstance(timeout, bool) or not isinstance(timeout, (float, int)) or not math.isfinite(timeout) or timeout <= 0:
             raise InvalidArgumentError("timeout must be a positive finite number")
         token = os.environ.get("GITHUB_TOKEN") if token is None else token

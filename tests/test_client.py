@@ -34,6 +34,18 @@ def test_root_anonymous():
         assert c.get_contents("o", "r") == []
 
 
+def test_loads_github_token_from_project_dotenv(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("GITHUB_TOKEN", raising=False)
+    (tmp_path / ".env").write_text("GITHUB_TOKEN=dotenv-github-token\n", encoding="utf-8")
+    def handler(request):
+        assert request.headers["Authorization"] == "Bearer dotenv-github-token"
+        return httpx.Response(200, json=[])
+    with GitHubClient(transport=httpx.MockTransport(handler)) as c:
+        assert c.get_contents("o", "r") == []
+    monkeypatch.delenv("GITHUB_TOKEN")
+
+
 @pytest.mark.parametrize("path", ["../a", "a/../b", "/a", "a\\b", "a//b", "./a", "a/", "a\x00b"])
 def test_invalid_paths_no_request(path):
     with client(lambda r: pytest.fail("Must not request")) as c:

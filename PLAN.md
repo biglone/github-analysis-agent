@@ -52,7 +52,7 @@ github-analysis-agent/
 
 先不引入 PyGithub 或 LangChain，减少第一阶段需要理解的抽象层。
 
-Token 从环境变量 `GITHUB_TOKEN` 读取；`.env.example` 只记录变量名，**不会自动加载 `.env`**。公开仓库可以匿名读取；需要 Token 时，由你在运行环境中配置，连接器的授权不会自动成为 Python 程序的凭证。私有仓库使用细粒度 Token 时需要对应仓库的 `Contents: read` 权限。[GitHub Docs](https://docs.github.com/en/rest/repos/contents?apiVersion=2026-03-10&utm_source=chatgpt.com)
+Token 从环境变量 `GITHUB_TOKEN` 读取；项目初始化 GitHub 或 DeepSeek 客户端时会自动加载项目目录中的 `.env`，并优先使用已经设置的系统环境变量。公开仓库可以匿名读取；需要 Token 时，由你在运行环境中配置，连接器的授权不会自动成为 Python 程序的凭证。私有仓库使用细粒度 Token 时需要对应仓库的 `Contents: read` 权限。[GitHub Docs](https://docs.github.com/en/rest/repos/contents?apiVersion=2026-03-10&utm_source=chatgpt.com)
 
 **4. 两个工具的接口与边界**
 
@@ -145,7 +145,7 @@ GET /repos/{owner}/{repo}/contents/{path}
 - 使用 DeepSeek 官方 API，默认模型为 `deepseek-flash`；模型名可通过 `DEEPSEEK_MODEL` 覆盖，并通过 OpenAI 兼容 SDK 调用。`deepseek-chat` 已于 2026-07-24 退役。
 - 实现独立的模型适配接口，支持普通文本对话和 function calling。
 - 将现有 `list_directory`、`read_file` 的工具定义传递给模型请求；解析并返回模型文本、工具调用名称与参数，以及可用的 token 用量信息。
-- 通过环境变量管理 DeepSeek API Key，不在源码、日志或提交内容中保存密钥。
+- 通过环境变量管理 DeepSeek API Key；支持从项目根目录 `.env` 自动加载，已有系统环境变量优先。`.env` 不提交，不在源码、日志或示例配置中保存真实密钥。
 - 处理请求超时、认证失败、限流和网络异常，并以明确的错误结果提供给上层。
 - 使用 Mock 编写单元测试，并确认第一阶段现有测试继续通过。
 
