@@ -1,6 +1,6 @@
 # GitHub Analysis Agent — 第一、二阶段
 
-这是学习 AI Agent 开发的项目，按 [PLAN.md](PLAN.md) 实现 GitHub 工具层及独立的 DeepSeek 模型适配层。当前不包含 Agent Loop、RAG、记忆或 Agent 框架。
+这是学习 AI Agent 开发的项目，按 [PLAN.md](PLAN.md) 实现 GitHub 工具层、独立的 DeepSeek 模型适配层和最小只读 Agent Runtime。当前不包含 RAG、长期记忆或 Agent 框架。
 
 ## 安装与运行
 
@@ -12,6 +12,7 @@ source .venv/bin/activate
 python -m pip install -e '.[dev]'
 python -m pytest
 python examples/inspect_repository.py biglone github-analysis-agent --file PLAN.md
+python examples/analyze_repository.py biglone github-analysis-agent
 ```
 
 Windows PowerShell 的激活命令为 `.venv\Scripts\Activate.ps1`。
@@ -47,6 +48,33 @@ print(reply.usage.total_tokens)
 ```
 
 默认请求会附上 `list_directory` 和 `read_file` 的 Function Calling 定义。模型返回的调用以 `reply.tool_calls` 中的名称、参数和调用 ID 提供；适配层不会导入或执行 GitHub 工具，也不负责多轮对话。设置 `enable_tools=False` 可只请求文本响应。错误类型见 `github_analysis_agent.model_errors`；异常消息不包含 SDK 响应正文或 API Key。
+
+## Agent Runtime（任务 2.2）
+
+Runtime 将模型适配层与只读 GitHub 工具连接，维护多轮消息并将每个工具结果按 `tool_call_id` 回传。仅注册 `list_directory`、`read_file`；目标仓库固定为 `run` 指定的 owner/repo，不允许模型访问其他仓库、执行 Python 或运行系统命令。
+
+```bash
+python examples/analyze_repository.py biglone github-analysis-agent
+```
+
+也可以在 Python 中控制资源上限：
+
+```python
+from github_analysis_agent import AgentRuntime
+
+with AgentRuntime(max_turns=8, max_tool_calls=12,
+                  timeout_seconds=120, max_tool_result_chars=20_000) as agent:
+    result = agent.run(
+        "分析项目目录结构，并说明主要文件的用途。",
+        owner="biglone",
+        repo="github-analysis-agent",
+    )
+
+print(result.answer)
+print(result.termination_reason, result.token_usage.total_tokens)
+```
+
+`termination_reason` 为 `completed` 表示模型给出了最终回答；也可能是 `max_turns`、`max_tool_calls`、`timeout` 或 API/权限错误。404 等可恢复工具错误会以安全 JSON 结果发给模型；相同失败调用在本轮不会重复执行。超长工具结果不会发送给模型，而会变成明确错误。可通过 `result.tool_stats` 查看工具调用状态。Runtime 日志只记录模型调用数、工具名、状态、耗时、token 用量和结束原因，不记录任务、参数、文件路径、内容或凭证。示例将 HTTPX 请求日志保持在 WARNING；如果自行启用 HTTPX INFO 日志，HTTP 请求 URL 会包含仓库路径。
 
 ## 接口
 

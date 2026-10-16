@@ -76,6 +76,7 @@ class ModelResponse:
     text: str | None
     tool_calls: tuple[ToolCall, ...]
     usage: TokenUsage
+    reasoning_content: str | None = None
 
 
 def _value(obj, key, default=None):
@@ -100,14 +101,19 @@ class DeepSeekAdapter:
             max_retries=0,
         )
 
-    def complete(self, messages, *, enable_tools=True):
+    def close(self):
+        """Release the underlying OpenAI-compatible HTTP client."""
+        self._client.close()
+
+    def complete(self, messages, *, enable_tools=True, timeout=None):
         """Request a response; returned tool calls are data and are never executed."""
         request = {"model": self.model, "messages": messages}
         if enable_tools:
             request["tools"] = TOOL_DEFINITIONS
             request["tool_choice"] = "auto"
         try:
-            response = self._client.chat.completions.create(**request)
+            client = self._client if timeout is None else self._client.with_options(timeout=timeout)
+            response = client.chat.completions.create(**request)
         except APITimeoutError:
             raise ModelTimeoutError("DeepSeek request timed out", retryable=True) from None
         except AuthenticationError:
@@ -157,4 +163,9 @@ class DeepSeekAdapter:
             completion_tokens=_value(usage, "completion_tokens"),
             total_tokens=_value(usage, "total_tokens"),
         )
-        return ModelResponse(text=_value(message, "content"), tool_calls=tuple(calls), usage=token_usage)
+        return ModelResponse(
+            text=_value(message, "content"),
+            tool_calls=tuple(calls),
+            usage=token_usage,
+            reasoning_content=_value(message, "reasoning_content"),
+        )

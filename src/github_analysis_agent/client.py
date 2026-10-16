@@ -53,18 +53,23 @@ class GitHubClient:
     def __exit__(self, *args):
         self.close()
 
-    def get_contents(self, owner, repo, path="", ref=None):
+    def get_contents(self, owner, repo, path="", ref=None, *, timeout=None):
         validate_arguments(owner, repo, path, ref)
         encoded = "/".join(quote(segment, safe="") for segment in path.split("/"))
         url = f"/repos/{quote(owner, safe='')}/{quote(repo, safe='')}/contents"
         if path:
             url += "/" + encoded
+        request_options = {}
+        if timeout is not None:
+            if isinstance(timeout, bool) or not isinstance(timeout, (int, float)) or not math.isfinite(timeout) or timeout <= 0:
+                raise InvalidArgumentError("timeout must be a positive finite number")
+            request_options["timeout"] = timeout
         try:
-            response = self._http.get(url, params={} if ref is None else {"ref": ref})
+            response = self._http.get(url, params={} if ref is None else {"ref": ref}, **request_options)
         except httpx.RequestError:
             # Do not propagate request/header details or a token-bearing exception.
             raise NetworkError("GitHub request timed out or could not connect", retryable=True) from None
-        logger.info("GitHub contents path=%r status=%s request_id=%s", path,
+        logger.info("GitHub contents status=%s request_id=%s",
                     response.status_code, response.headers.get("x-github-request-id"))
         try:
             data = response.json()

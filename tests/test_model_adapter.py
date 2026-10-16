@@ -63,6 +63,30 @@ def test_environment_model_and_text_without_tools(monkeypatch):
     assert DeepSeekAdapter(client=sdk_client(handler)).complete([], enable_tools=False).text == "hello"
 
 
+def test_preserves_reasoning_content_and_accepts_per_request_timeout(monkeypatch):
+    monkeypatch.setenv("DEEPSEEK_API_KEY", "unit-test-secret")
+    body = completion()
+    body["choices"][0]["message"]["reasoning_content"] = "private reasoning payload"
+    requests = []
+    def handler(request):
+        requests.append(request)
+        return httpx.Response(200, json=body)
+    adapter = DeepSeekAdapter(client=sdk_client(handler))
+    result = adapter.complete([], timeout=2.5)
+    assert result.reasoning_content == "private reasoning payload"
+    assert requests[0].extensions["timeout"]["read"] == 2.5
+    history = [{"role": "user", "content": "question"}, {
+        "role": "assistant", "content": None,
+        "reasoning_content": result.reasoning_content,
+        "tool_calls": [{"id": "call-1", "type": "function", "function": {
+            "name": "read_file", "arguments": '{"owner":"o","repo":"r","path":"README.md"}'}}],
+    }, {"role": "tool", "tool_call_id": "call-1", "content": '{"ok":true}'}]
+    adapter.complete(history, timeout=1.5)
+    sent_history = json.loads(requests[1].content)["messages"]
+    assert sent_history[1]["reasoning_content"] == "private reasoning payload"
+    adapter.close()
+
+
 def test_single_tool_call_is_parsed_without_execution(monkeypatch):
     monkeypatch.setenv("DEEPSEEK_API_KEY", "unit-test-secret")
     calls = [{"id": "call-1", "type": "function", "function": {

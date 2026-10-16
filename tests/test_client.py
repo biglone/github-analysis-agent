@@ -34,6 +34,14 @@ def test_root_anonymous():
         assert c.get_contents("o", "r") == []
 
 
+def test_get_contents_accepts_per_request_timeout():
+    def handler(request):
+        assert request.extensions["timeout"]["read"] == 0.25
+        return httpx.Response(200, json=[])
+    with GitHubClient(token="", transport=httpx.MockTransport(handler)) as c:
+        assert c.get_contents("o", "r", timeout=0.25) == []
+
+
 def test_loads_github_token_from_project_dotenv(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     monkeypatch.delenv("GITHUB_TOKEN", raising=False)

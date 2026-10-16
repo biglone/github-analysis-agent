@@ -28,10 +28,11 @@ def _entry(data):
     return {key: data[key] for key in ("name", "path", "type", "size", "sha")}
 
 
-def list_directory(client, owner, repo, path="", ref=None):
+def list_directory(client, owner, repo, path="", ref=None, *, timeout=None):
     """List immediate children; emit DirectoryLimitWarning at 1,000 entries."""
     validate_arguments(owner, repo, path, ref)
-    data = client.get_contents(owner, repo, path, ref)
+    data = (client.get_contents(owner, repo, path, ref) if timeout is None else
+            client.get_contents(owner, repo, path, ref, timeout=timeout))
     if not isinstance(data, list):
         if isinstance(data, dict):
             raise WrongContentTypeError("Expected a directory, received a content object")
@@ -49,12 +50,13 @@ def list_directory(client, owner, repo, path="", ref=None):
     return result
 
 
-def read_file(client, owner, repo, path, ref=None):
+def read_file(client, owner, repo, path, ref=None, *, timeout=None):
     """Read a regular UTF-8 file of at most MAX_FILE_SIZE bytes."""
     validate_arguments(owner, repo, path, ref)
     if not path:
         raise InvalidArgumentError("read_file requires a nonempty file path")
-    data = client.get_contents(owner, repo, path, ref)
+    data = (client.get_contents(owner, repo, path, ref) if timeout is None else
+            client.get_contents(owner, repo, path, ref, timeout=timeout))
     if isinstance(data, list):
         raise WrongContentTypeError("Expected a file, received a directory")
     entry = _entry(data)
