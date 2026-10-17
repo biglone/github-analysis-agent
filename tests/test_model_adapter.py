@@ -123,6 +123,8 @@ def test_invalid_tool_arguments_raise_safe_error(monkeypatch, arguments):
 
 
 def test_missing_key_is_clear(monkeypatch):
+    # Isolate the missing-key scenario from a developer's real .env file.
+    monkeypatch.setattr("github_analysis_agent.model_adapter.load_project_env", lambda: None)
     monkeypatch.delenv("DEEPSEEK_API_KEY", raising=False)
     with pytest.raises(MissingAPIKeyError, match="DEEPSEEK_API_KEY"):
         DeepSeekAdapter()
